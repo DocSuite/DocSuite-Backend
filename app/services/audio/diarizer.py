@@ -7,7 +7,7 @@ from app.core.exceptions import DocSuiteException
 async def diarize_audio(file_path: Path) -> dict:
     settings = get_settings()
     if settings.hf_token is None:
-        return {"segments": []}
+        raise DocSuiteException("HF_TOKEN no configurado", status_code=503)
 
     try:
         from pyannote.audio import Pipeline

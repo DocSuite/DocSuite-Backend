@@ -9,7 +9,7 @@ from app.services.storage.file_service import save_upload_file
 router = APIRouter()
 
 
-@router.post("/", response_model=AnalysisRead, status_code=status.HTTP_201_CREATED)
+@router.post("/analysis", response_model=AnalysisRead, status_code=status.HTTP_201_CREATED)
 async def create_document_analysis(
     db: DbSession,
     current_user: CurrentUser,

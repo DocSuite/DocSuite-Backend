@@ -42,7 +42,15 @@ DataGrip puede conectarse a:
 ```text
 Host: localhost
 Port: 5432
-Database: docsuite
+Database: DocSuit
 User: postgres
-Password: postgres
+Password: el password configurado en tu PostgreSQL local
+```
+
+Configura la conexion en `.env`:
+
+```text
+DATABASE_URL=postgresql+psycopg://postgres:<PASSWORD>@localhost:5432/DocSuit
+HF_TOKEN=<token_read_de_huggingface>
+OPENAI_API_KEY=<token_de_openai>
 ```
