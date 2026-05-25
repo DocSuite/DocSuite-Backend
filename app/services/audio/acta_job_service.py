@@ -134,7 +134,7 @@ def _run_acta_job(job_id: str) -> None:
     preprocessed: Path | None = None
     try:
         _set_progress(job_id, 10, "Preprocesando audio")
-        preprocessed = preprocess_audio(file_path)
+        preprocessed, duration = preprocess_audio(file_path)
 
         _set_progress(job_id, 22, "Transcribiendo audio")
         transcription = transcribe_audio_sync(preprocessed)
@@ -144,6 +144,7 @@ def _run_acta_job(job_id: str) -> None:
 
         _set_progress(job_id, 80, "Generando acta")
         acta_payload = generate_acta_sync(filename, transcription, diarization)
+        acta_payload.duration_seconds = duration
 
         db = get_session_local()()
         try:

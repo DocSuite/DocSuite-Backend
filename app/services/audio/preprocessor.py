@@ -34,7 +34,7 @@ def _rms_normalize(audio: np.ndarray) -> np.ndarray:
     return np.clip(audio * gain, -1.0, 1.0)
 
 
-def preprocess_audio(file_path: Path) -> Path:
+def preprocess_audio(file_path: Path) -> tuple[Path, float | None]:
     ensure_ffmpeg_available()
 
     settings = get_settings()
@@ -47,6 +47,8 @@ def preprocess_audio(file_path: Path) -> Path:
 
     _to_wav_16k(file_path, wav_raw)
 
+    duration: float | None = None
+
     try:
         import soundfile as sf
 
@@ -56,6 +58,7 @@ def preprocess_audio(file_path: Path) -> Path:
             audio = audio.mean(axis=1)
 
         audio = audio.astype(np.float32)
+        duration = len(audio) / sr
 
         try:
             import noisereduce as nr
@@ -70,4 +73,4 @@ def preprocess_audio(file_path: Path) -> Path:
     finally:
         wav_raw.unlink(missing_ok=True)
 
-    return wav_out
+    return wav_out, duration

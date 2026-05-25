@@ -12,6 +12,7 @@ class TaskItem(BaseModel):
 
 class ActaCreate(BaseModel):
     filename: str
+    duration_seconds: float | None = None
     transcription: str
     diarization: dict | None = None
     result: str
@@ -20,6 +21,7 @@ class ActaCreate(BaseModel):
 
 class ActaRead(TimestampIdSchema):
     filename: str
+    duration_seconds: float | None
     transcription: str
     diarization: dict | None
     result: str

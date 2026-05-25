@@ -58,6 +58,47 @@ def ensure_ffmpeg_available() -> None:
         _FFMPEG_REGISTERED = True
 
 
+def get_wav_duration(wav_path: Path) -> float | None:
+    try:
+        with wave.open(str(wav_path), "rb") as wf:
+            return wf.getnframes() / wf.getframerate()
+    except Exception:
+        return None
+
+
+def split_audio_into_chunks(wav_path: Path, chunk_seconds: int, temp_dir: Path) -> list[Path]:
+    with wave.open(str(wav_path), "rb") as wf:
+        sr = wf.getframerate()
+        sw = wf.getsampwidth()
+        nc = wf.getnchannels()
+        total_frames = wf.getnframes()
+
+    frames_per_chunk = sr * chunk_seconds
+    chunks: list[Path] = []
+    offset = 0
+    i = 0
+
+    while offset < total_frames:
+        end = min(offset + frames_per_chunk, total_frames)
+        chunk_path = temp_dir / f"{wav_path.stem}_c{i}.wav"
+
+        with wave.open(str(wav_path), "rb") as wf:
+            wf.setpos(offset)
+            frames = wf.readframes(end - offset)
+
+        with wave.open(str(chunk_path), "wb") as wc:
+            wc.setnchannels(nc)
+            wc.setsampwidth(sw)
+            wc.setframerate(sr)
+            wc.writeframes(frames)
+
+        chunks.append(chunk_path)
+        offset += frames_per_chunk
+        i += 1
+
+    return chunks
+
+
 def load_audio_for_pyannote(file_path: Path) -> dict:
     import numpy as np
     import torch
