@@ -38,6 +38,7 @@ class ActaJobRead(BaseModel):
 
 
 class ActaUpdate(BaseModel):
+    transcription: str | None = Field(default=None, description="Texto transcrito revisado")
     result: str | None = Field(default=None, description="Texto del acta en Markdown")
     tasks: list[TaskItem] | None = Field(default=None, description="Lista de tareas actualizada")
 
