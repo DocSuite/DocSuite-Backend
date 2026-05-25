@@ -41,6 +41,8 @@ def update_speaker_names(db: Session, acta: Acta, names: dict[str, str]) -> Acta
 
 
 def update_acta_content(db: Session, acta: Acta, payload: ActaUpdate) -> Acta:
+    if payload.transcription is not None:
+        acta.transcription = payload.transcription
     if payload.result is not None:
         acta.result = payload.result
     if payload.tasks is not None:
