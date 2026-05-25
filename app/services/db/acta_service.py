@@ -50,6 +50,26 @@ def update_acta_content(db: Session, acta: Acta, payload: ActaUpdate) -> Acta:
     return acta
 
 
-def list_actas_by_user(db: Session, user_id: str) -> list[Acta]:
-    statement = select(Acta).where(Acta.user_id == user_id).order_by(Acta.created_at.desc())
-    return list(db.scalars(statement).all())
+def list_actas_by_user(
+    db: Session,
+    user_id: str,
+    q: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> list[Acta]:
+    stmt = select(Acta).where(Acta.user_id == user_id)
+
+    if q:
+        term = f"%{q}%"
+        stmt = stmt.where(
+            Acta.filename.ilike(term) | Acta.transcription.ilike(term) | Acta.result.ilike(term)
+        )
+
+    if from_date:
+        stmt = stmt.where(Acta.created_at >= from_date)
+
+    if to_date:
+        stmt = stmt.where(Acta.created_at <= to_date)
+
+    stmt = stmt.order_by(Acta.created_at.desc())
+    return list(db.scalars(stmt).all())

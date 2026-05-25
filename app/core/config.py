@@ -31,6 +31,10 @@ class Settings(BaseSettings):
 
     whisper_model: str = "large-v3"
     whisper_device: str = Field(default="auto", validation_alias="WHISPER_DEVICE")
+    whisper_language: str = Field(default="auto", validation_alias="WHISPER_LANGUAGE")
+    whisper_chunk_threshold: int = Field(default=1800, validation_alias="WHISPER_CHUNK_THRESHOLD")
+    whisper_chunk_size: int = Field(default=600, validation_alias="WHISPER_CHUNK_SIZE")
+    max_concurrent_jobs_per_user: int = Field(default=2, validation_alias="MAX_CONCURRENT_JOBS_PER_USER")
     pyannote_model: str = "pyannote/speaker-diarization-community-1"
     pyannote_device: str = Field(default="auto", validation_alias="PYANNOTE_DEVICE")
     hf_token: str | None = Field(default=None, validation_alias="HF_TOKEN")
