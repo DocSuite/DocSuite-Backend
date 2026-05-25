@@ -35,6 +35,11 @@ class ActaJobRead(BaseModel):
     error: str | None = None
 
 
+class ActaUpdate(BaseModel):
+    result: str | None = Field(default=None, description="Texto del acta en Markdown")
+    tasks: list[TaskItem] | None = Field(default=None, description="Lista de tareas actualizada")
+
+
 class SpeakerNameMap(BaseModel):
     names: dict[str, str] = Field(
         ...,
