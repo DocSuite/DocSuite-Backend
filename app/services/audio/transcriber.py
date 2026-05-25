@@ -1,17 +1,16 @@
 from pathlib import Path
 
-from app.core.config import get_settings
-from app.core.exceptions import DocSuiteException
+from app.services.audio.audio_utils import ensure_ffmpeg_available
+from app.services.audio.model_registry import get_whisper_model
 
 
 async def transcribe_audio(file_path: Path) -> str:
-    settings = get_settings()
-    try:
-        import whisper
-    except ImportError as exc:
-        raise DocSuiteException("Whisper no esta instalado", status_code=503) from exc
+    return transcribe_audio_sync(file_path)
 
-    model = whisper.load_model(settings.whisper_model, device="cuda")
-    result = model.transcribe(str(file_path), language="es")
+
+def transcribe_audio_sync(file_path: Path) -> str:
+    ensure_ffmpeg_available()
+    model = get_whisper_model()
+    result = model.transcribe(str(file_path.resolve()), language="es")
     text = result.get("text", "")
     return text.strip()

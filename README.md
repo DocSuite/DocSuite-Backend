@@ -23,6 +23,12 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload
 ```
 
+Para dependencias de audio/IA de DocActa:
+
+```bash
+pip install -r requirements-ai.txt
+```
+
 ## Docker
 
 ```bash
@@ -42,7 +48,22 @@ DataGrip puede conectarse a:
 ```text
 Host: localhost
 Port: 5432
-Database: docsuite
+Database: DocSuit
 User: postgres
-Password: postgres
+Password: el password configurado en tu PostgreSQL local
+```
+
+Configura la conexion en `.env`:
+
+```text
+DATABASE_URL=postgresql+psycopg://postgres:<PASSWORD>@localhost:5432/DocSuit
+JWT_SECRET_KEY=<clave_larga_privada>
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+HF_TOKEN=<token_read_de_huggingface>
+OPENAI_API_KEY=<token_de_openai>
+WHISPER_MODEL=large-v3
+WHISPER_DEVICE=auto
+PYANNOTE_MODEL=pyannote/speaker-diarization-community-1
+PYANNOTE_DEVICE=auto
 ```

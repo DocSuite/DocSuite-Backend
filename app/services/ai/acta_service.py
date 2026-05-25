@@ -10,6 +10,16 @@ def _load_prompt() -> str:
 
 
 async def generate_acta(filename: str, transcription: str, diarization: dict | None) -> ActaCreate:
+    return await _generate_acta_payload(filename, transcription, diarization)
+
+
+def generate_acta_sync(filename: str, transcription: str, diarization: dict | None) -> ActaCreate:
+    import asyncio
+
+    return asyncio.run(generate_acta(filename, transcription, diarization))
+
+
+async def _generate_acta_payload(filename: str, transcription: str, diarization: dict | None) -> ActaCreate:
     diarization_text = "" if diarization is None else str(diarization)
     user_prompt = f"TRANSCRIPCION:\n{transcription}\n\nDIARIZACION:\n{diarization_text}"
     result = await OpenAIClient().generate(_load_prompt(), user_prompt)
