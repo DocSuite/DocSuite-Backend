@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUser, DbSession
 from app.schemas.acta import ActaRead
@@ -15,5 +15,12 @@ def get_analysis_history(db: DbSession, current_user: CurrentUser) -> list[Analy
 
 
 @router.get("/meeting-minutes", response_model=list[ActaRead])
-def get_acta_history(db: DbSession, current_user: CurrentUser) -> list[ActaRead]:
-    return [ActaRead.model_validate(item) for item in list_actas_by_user(db, current_user.id)]
+def get_acta_history(
+    db: DbSession,
+    current_user: CurrentUser,
+    q: str | None = Query(default=None, description="Buscar en nombre de archivo, transcripción y acta"),
+    from_date: str | None = Query(default=None, description="Fecha inicio (YYYY-MM-DD)"),
+    to_date: str | None = Query(default=None, description="Fecha fin (YYYY-MM-DD)"),
+) -> list[ActaRead]:
+    items = list_actas_by_user(db, current_user.id, q=q, from_date=from_date, to_date=to_date)
+    return [ActaRead.model_validate(item) for item in items]

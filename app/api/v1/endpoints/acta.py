@@ -1,4 +1,7 @@
+import asyncio
+import json
 import urllib.parse
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, File, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -33,6 +36,38 @@ def read_meeting_acta_job(job_id: str, current_user: CurrentUser) -> ActaJobRead
     if job is None:
         raise DocSuiteException("Job no encontrado", status_code=status.HTTP_404_NOT_FOUND)
     return job
+
+
+@router.get("/jobs/{job_id}/stream")
+async def stream_job_progress(job_id: str, current_user: CurrentUser) -> StreamingResponse:
+    user_id = current_user.id
+
+    async def _generator() -> AsyncGenerator[str, None]:
+        while True:
+            job = get_acta_job(job_id, user_id)
+            if job is None:
+                yield f"data: {json.dumps({'error': 'Job no encontrado'})}\n\n"
+                break
+
+            payload = {
+                "progress": job.progress,
+                "status": job.status,
+                "message": job.message,
+                "acta_id": job.acta_id,
+                "error": job.error,
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+
+            if job.status in ("completed", "failed"):
+                break
+
+            await asyncio.sleep(1)
+
+    return StreamingResponse(
+        _generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/", response_model=ActaRead, status_code=status.HTTP_201_CREATED)
@@ -84,6 +119,16 @@ def export_acta_docx(acta_id: str, db: DbSession, current_user: CurrentUser) -> 
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{safe_name}"},
     )
+
+
+@router.post("/{acta_id}/regenerate", response_model=ActaRead)
+async def regenerate_acta(acta_id: str, db: DbSession, current_user: CurrentUser) -> ActaRead:
+    acta = get_acta_by_id(db, acta_id, current_user.id)
+    if acta is None:
+        raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
+    acta_payload = await generate_acta(acta.filename, acta.transcription, acta.diarization)
+    acta = update_acta_content(db, acta, ActaUpdate(result=acta_payload.result))
+    return ActaRead.model_validate(acta)
 
 
 @router.patch("/{acta_id}/speakers", response_model=ActaRead)

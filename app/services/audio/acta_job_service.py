@@ -8,6 +8,7 @@ from app.models.job import ActaJobRecord
 from app.schemas.acta import ActaJobRead
 from app.services.ai.acta_service import generate_acta_sync
 from app.services.audio.diarizer import diarize_audio_sync
+from app.services.audio.preprocessor import preprocess_audio
 from app.services.audio.transcriber import transcribe_audio_sync
 from app.services.db.acta_service import create_acta
 
@@ -130,14 +131,16 @@ def _run_acta_job(job_id: str) -> None:
     finally:
         db_read.close()
 
+    preprocessed: Path | None = None
     try:
-        _set_progress(job_id, 10, "Audio recibido")
+        _set_progress(job_id, 10, "Preprocesando audio")
+        preprocessed = preprocess_audio(file_path)
 
-        _set_progress(job_id, 25, "Transcribiendo audio")
-        transcription = transcribe_audio_sync(file_path)
+        _set_progress(job_id, 22, "Transcribiendo audio")
+        transcription = transcribe_audio_sync(preprocessed)
 
         _set_progress(job_id, 55, "Identificando participantes")
-        diarization = diarize_audio_sync(file_path)
+        diarization = diarize_audio_sync(preprocessed)
 
         _set_progress(job_id, 80, "Generando acta")
         acta_payload = generate_acta_sync(filename, transcription, diarization)
@@ -153,6 +156,10 @@ def _run_acta_job(job_id: str) -> None:
 
     except Exception as exc:
         _persist_failed(job_id, str(exc))
+
+    finally:
+        if preprocessed is not None:
+            preprocessed.unlink(missing_ok=True)
 
 
 def mark_orphan_jobs_failed() -> None:
