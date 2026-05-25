@@ -1,14 +1,18 @@
+import urllib.parse
+
 from fastapi import APIRouter, File, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.exceptions import DocSuiteException
-from app.schemas.acta import ActaJobRead, ActaRead, SpeakerNameMap
+from app.schemas.acta import ActaJobRead, ActaRead, ActaUpdate, SpeakerNameMap
 from app.services.ai.acta_service import generate_acta
 from app.services.audio.acta_job_service import create_acta_job, get_acta_job
 from app.services.audio.audio_utils import AUDIO_EXTENSIONS
 from app.services.audio.diarizer import diarize_audio
 from app.services.audio.transcriber import transcribe_audio
-from app.services.db.acta_service import create_acta, get_acta_by_id, update_speaker_names
+from app.services.db.acta_service import create_acta, get_acta_by_id, update_acta_content, update_speaker_names
+from app.services.export.docx_service import markdown_to_docx
 from app.services.storage.file_service import save_upload_file
 
 router = APIRouter()
@@ -51,6 +55,35 @@ def read_acta(acta_id: str, db: DbSession, current_user: CurrentUser) -> ActaRea
     if acta is None:
         raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
     return ActaRead.model_validate(acta)
+
+
+@router.patch("/{acta_id}", response_model=ActaRead)
+def edit_acta(
+    acta_id: str,
+    body: ActaUpdate,
+    db: DbSession,
+    current_user: CurrentUser,
+) -> ActaRead:
+    acta = get_acta_by_id(db, acta_id, current_user.id)
+    if acta is None:
+        raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
+    acta = update_acta_content(db, acta, body)
+    return ActaRead.model_validate(acta)
+
+
+@router.get("/{acta_id}/export/docx")
+def export_acta_docx(acta_id: str, db: DbSession, current_user: CurrentUser) -> StreamingResponse:
+    acta = get_acta_by_id(db, acta_id, current_user.id)
+    if acta is None:
+        raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
+
+    buf = markdown_to_docx(acta.result, acta.filename)
+    safe_name = urllib.parse.quote(acta.filename.rsplit(".", 1)[0] + "_acta.docx")
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{safe_name}"},
+    )
 
 
 @router.patch("/{acta_id}/speakers", response_model=ActaRead)

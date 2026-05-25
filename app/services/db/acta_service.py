@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.acta import Acta
-from app.schemas.acta import ActaCreate
+from app.schemas.acta import ActaCreate, ActaUpdate
 
 
 def create_acta(db: Session, user_id: str, payload: ActaCreate) -> Acta:
@@ -35,6 +35,16 @@ def update_speaker_names(db: Session, acta: Acta, names: dict[str, str]) -> Acta
 
     acta.diarization = {"segments": updated_segments}
     acta.transcription = updated_transcription
+    db.commit()
+    db.refresh(acta)
+    return acta
+
+
+def update_acta_content(db: Session, acta: Acta, payload: ActaUpdate) -> Acta:
+    if payload.result is not None:
+        acta.result = payload.result
+    if payload.tasks is not None:
+        acta.tasks = [t.model_dump() for t in payload.tasks]
     db.commit()
     db.refresh(acta)
     return acta
