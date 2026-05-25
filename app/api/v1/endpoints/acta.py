@@ -27,7 +27,10 @@ async def create_meeting_acta_job(
     file: UploadFile = File(...),
 ) -> ActaJobRead:
     saved_file = await save_upload_file(file, allowed_extensions=AUDIO_EXTENSIONS)
-    return create_acta_job(current_user.id, file.filename or saved_file.name, saved_file)
+    try:
+        return create_acta_job(current_user.id, file.filename or saved_file.name, saved_file)
+    except RuntimeError as exc:
+        raise DocSuiteException(str(exc), status_code=status.HTTP_429_TOO_MANY_REQUESTS) from exc
 
 
 @router.get("/jobs/{job_id}", response_model=ActaJobRead)

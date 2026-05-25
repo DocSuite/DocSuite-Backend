@@ -3,6 +3,7 @@ from threading import Lock, Thread
 
 from sqlalchemy import select, update
 
+from app.core.config import get_settings
 from app.db.session import get_session_local
 from app.models.job import ActaJobRecord
 from app.schemas.acta import ActaJobRead
@@ -13,10 +14,33 @@ from app.services.audio.transcriber import transcribe_audio_sync
 from app.services.db.acta_service import create_acta
 
 _progress: dict[str, tuple[int, str]] = {}
+_active_jobs: dict[str, int] = {}
 _lock = Lock()
 
 
+def _acquire_slot(user_id: str) -> bool:
+    settings = get_settings()
+    with _lock:
+        current = _active_jobs.get(user_id, 0)
+        if current >= settings.max_concurrent_jobs_per_user:
+            return False
+        _active_jobs[user_id] = current + 1
+        return True
+
+
+def _release_slot(user_id: str) -> None:
+    with _lock:
+        _active_jobs[user_id] = max(0, _active_jobs.get(user_id, 1) - 1)
+
+
 def create_acta_job(user_id: str, filename: str, file_path: Path) -> ActaJobRead:
+    if not _acquire_slot(user_id):
+        settings = get_settings()
+        raise RuntimeError(
+            f"Límite de {settings.max_concurrent_jobs_per_user} "
+            "jobs simultáneos alcanzado. Espera a que termine el actual."
+        )
+
     db = get_session_local()()
     try:
         record = ActaJobRecord(
@@ -31,13 +55,16 @@ def create_acta_job(user_id: str, filename: str, file_path: Path) -> ActaJobRead
         db.commit()
         db.refresh(record)
         job_id = record.id
+    except Exception:
+        _release_slot(user_id)
+        raise
     finally:
         db.close()
 
     with _lock:
         _progress[job_id] = (0, "En cola")
 
-    Thread(target=_run_acta_job, args=(job_id,), daemon=True).start()
+    Thread(target=_run_acta_job, args=(job_id, user_id), daemon=True).start()
     return ActaJobRead(job_id=job_id, status="queued", progress=0, message="En cola")
 
 
@@ -119,13 +146,12 @@ def _persist_failed(job_id: str, error: str) -> None:
         _progress.pop(job_id, None)
 
 
-def _run_acta_job(job_id: str) -> None:
+def _run_acta_job(job_id: str, user_id: str) -> None:
     db_read = get_session_local()()
     try:
         record = db_read.scalars(select(ActaJobRecord).where(ActaJobRecord.id == job_id)).first()
         if record is None:
             return
-        user_id = record.user_id
         filename = record.filename
         file_path = Path(record.file_path)
     finally:
@@ -161,6 +187,7 @@ def _run_acta_job(job_id: str) -> None:
     finally:
         if preprocessed is not None:
             preprocessed.unlink(missing_ok=True)
+        _release_slot(user_id)
 
 
 def mark_orphan_jobs_failed() -> None:
