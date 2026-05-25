@@ -1,10 +1,10 @@
-from app.db.session import SessionLocal
+from app.db.session import get_session_local
 from app.schemas.user import UserCreate
 from app.services.db.user_service import create_user, get_user_by_email
 
 
 def seed() -> None:
-    db = SessionLocal()
+    db = get_session_local()()
     try:
         email = "docente@docsuite.local"
         if get_user_by_email(db, email) is None:

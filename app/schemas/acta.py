@@ -24,3 +24,20 @@ class ActaRead(TimestampIdSchema):
     diarization: dict | None
     result: str
     tasks: list[dict]
+
+
+class ActaJobRead(BaseModel):
+    job_id: str
+    status: str
+    progress: int
+    message: str
+    acta_id: str | None = None
+    error: str | None = None
+
+
+class SpeakerNameMap(BaseModel):
+    names: dict[str, str] = Field(
+        ...,
+        description="Mapeo de speaker_id a nombre real. Ej: {'SPEAKER_00': 'Dr. Luis Lenin'}",
+        examples=[{"SPEAKER_00": "Dr. Luis Lenin", "SPEAKER_01": "Lic. María García"}],
+    )

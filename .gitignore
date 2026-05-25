@@ -9,6 +9,8 @@ venv/
 storage/uploads/*
 storage/processed/*
 storage/temp/*
+storage/bin/*
 !storage/uploads/.gitkeep
 !storage/processed/.gitkeep
 !storage/temp/.gitkeep
+!storage/bin/.gitkeep

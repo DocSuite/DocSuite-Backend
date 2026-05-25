@@ -15,6 +15,31 @@ def create_acta(db: Session, user_id: str, payload: ActaCreate) -> Acta:
     return acta
 
 
+def get_acta_by_id(db: Session, acta_id: str, user_id: str) -> Acta | None:
+    statement = select(Acta).where(Acta.id == acta_id, Acta.user_id == user_id)
+    return db.scalars(statement).first()
+
+
+def update_speaker_names(db: Session, acta: Acta, names: dict[str, str]) -> Acta:
+    if acta.diarization is None:
+        return acta
+
+    updated_segments = []
+    for segment in acta.diarization.get("segments", []):
+        original = segment.get("speaker", "")
+        updated_segments.append({**segment, "speaker": names.get(original, original)})
+
+    updated_transcription = acta.transcription
+    for original, real_name in names.items():
+        updated_transcription = updated_transcription.replace(original, real_name)
+
+    acta.diarization = {"segments": updated_segments}
+    acta.transcription = updated_transcription
+    db.commit()
+    db.refresh(acta)
+    return acta
+
+
 def list_actas_by_user(db: Session, user_id: str) -> list[Acta]:
     statement = select(Acta).where(Acta.user_id == user_id).order_by(Acta.created_at.desc())
     return list(db.scalars(statement).all())

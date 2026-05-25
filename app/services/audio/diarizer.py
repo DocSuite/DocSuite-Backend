@@ -1,21 +1,18 @@
 from pathlib import Path
 
-from app.core.config import get_settings
-from app.core.exceptions import DocSuiteException
+from app.services.audio.audio_utils import ensure_ffmpeg_available, load_audio_for_pyannote
+from app.services.audio.model_registry import get_pyannote_pipeline
 
 
 async def diarize_audio(file_path: Path) -> dict:
-    settings = get_settings()
-    if settings.hf_token is None:
-        raise DocSuiteException("HF_TOKEN no configurado", status_code=503)
+    return diarize_audio_sync(file_path)
 
-    try:
-        from pyannote.audio import Pipeline
-    except ImportError as exc:
-        raise DocSuiteException("pyannote.audio no esta instalado", status_code=503) from exc
 
-    pipeline = Pipeline.from_pretrained(settings.pyannote_model, token=settings.hf_token)
-    diarization = pipeline(str(file_path))
+def diarize_audio_sync(file_path: Path) -> dict:
+    ensure_ffmpeg_available()
+    pipeline = get_pyannote_pipeline()
+    audio = load_audio_for_pyannote(file_path)
+    diarization = pipeline(audio)
     segments = []
     for turn, _, speaker in diarization.itertracks(yield_label=True):
         segments.append({"speaker": speaker, "start": turn.start, "end": turn.end})
