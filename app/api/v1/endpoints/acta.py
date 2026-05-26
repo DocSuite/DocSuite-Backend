@@ -14,6 +14,7 @@ from app.services.audio.acta_job_service import create_acta_job, get_acta_job
 from app.services.audio.audio_utils import AUDIO_EXTENSIONS
 from app.services.audio.diarizer import diarize_audio
 from app.services.audio.transcriber import transcribe_audio
+from app.services.db.audit_service import create_audit_event
 from app.services.db.acta_service import create_acta, get_acta_by_id, update_acta_content, update_speaker_names
 from app.services.export.docx_service import markdown_to_docx
 from app.services.storage.file_service import save_upload_file
@@ -84,6 +85,14 @@ async def create_meeting_acta(
     diarization = await diarize_audio(saved_file)
     acta_payload = await generate_acta(file.filename or saved_file.name, transcription, diarization)
     acta = create_acta(db, current_user.id, acta_payload)
+    create_audit_event(
+        db,
+        current_user.id,
+        "Acta generada",
+        "DocActa",
+        detail=acta.filename,
+        resource_id=acta.id,
+    )
     return ActaRead.model_validate(acta)
 
 
@@ -106,6 +115,14 @@ def edit_acta(
     if acta is None:
         raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
     acta = update_acta_content(db, acta, body)
+    create_audit_event(
+        db,
+        current_user.id,
+        "Acta editada",
+        "DocActa",
+        detail=acta.filename,
+        resource_id=acta.id,
+    )
     return ActaRead.model_validate(acta)
 
 
@@ -115,6 +132,14 @@ def export_acta_docx(acta_id: str, db: DbSession, current_user: CurrentUser) -> 
     if acta is None:
         raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
 
+    create_audit_event(
+        db,
+        current_user.id,
+        "Exportacion DOCX",
+        "DocActa",
+        detail=acta.filename,
+        resource_id=acta.id,
+    )
     buf = markdown_to_docx(acta.result, acta.filename)
     safe_name = urllib.parse.quote(acta.filename.rsplit(".", 1)[0] + "_acta.docx")
     return StreamingResponse(
@@ -131,6 +156,14 @@ async def regenerate_acta(acta_id: str, db: DbSession, current_user: CurrentUser
         raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
     acta_payload = await generate_acta(acta.filename, acta.transcription, acta.diarization)
     acta = update_acta_content(db, acta, ActaUpdate(result=acta_payload.result))
+    create_audit_event(
+        db,
+        current_user.id,
+        "Acta regenerada",
+        "DocActa",
+        detail=acta.filename,
+        resource_id=acta.id,
+    )
     return ActaRead.model_validate(acta)
 
 
@@ -145,4 +178,12 @@ def assign_speaker_names(
     if acta is None:
         raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
     acta = update_speaker_names(db, acta, body.names)
+    create_audit_event(
+        db,
+        current_user.id,
+        "Participantes actualizados",
+        "DocActa",
+        detail=acta.filename,
+        resource_id=acta.id,
+    )
     return ActaRead.model_validate(acta)

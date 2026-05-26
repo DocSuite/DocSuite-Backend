@@ -9,6 +9,7 @@ from app.core.jwt import create_access_token
 from app.core.security import verify_password
 from app.schemas.auth import AuthResponse, Token
 from app.schemas.user import UserCreate, UserRead
+from app.services.db.audit_service import create_audit_event
 from app.services.db.user_service import create_user, get_user_by_email
 
 router = APIRouter()
@@ -20,6 +21,7 @@ def register(payload: UserCreate, db: DbSession) -> AuthResponse:
         raise DocSuiteException("El correo ya esta registrado", status.HTTP_409_CONFLICT)
 
     user = create_user(db, payload)
+    create_audit_event(db, user.id, "Usuario registrado", "Auth", detail=user.email)
     token = Token(access_token=create_access_token(user.id))
     return AuthResponse(user=UserRead.model_validate(user), token=token)
 
@@ -30,6 +32,7 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: DbSess
     if user is None or not verify_password(form_data.password, user.hashed_password):
         raise UnauthorizedException()
 
+    create_audit_event(db, user.id, "Inicio de sesion", "Auth", detail=user.email)
     return Token(access_token=create_access_token(user.id))
 
 
