@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     processed_dir: Path = Path("storage/processed")
     temp_dir: Path = Path("storage/temp")
     storage_bin_dir: Path = Path("storage/bin")
+    max_upload_file_size_mb: int = Field(default=200, validation_alias="MAX_UPLOAD_FILE_SIZE_MB")
 
     whisper_model: str = "large-v3"
     whisper_device: str = Field(default="auto", validation_alias="WHISPER_DEVICE")
