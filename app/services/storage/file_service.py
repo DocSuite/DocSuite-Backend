@@ -31,5 +31,9 @@ async def save_upload_file(file: UploadFile, allowed_extensions: set[str] | None
     if not content:
         raise DocSuiteException("El archivo esta vacio")
 
+    max_size = settings.max_upload_file_size_mb * 1024 * 1024
+    if len(content) > max_size:
+        raise DocSuiteException(f"El archivo supera el maximo permitido de {settings.max_upload_file_size_mb} MB")
+
     target_path.write_bytes(content)
     return target_path
