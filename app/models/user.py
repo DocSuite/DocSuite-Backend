@@ -15,3 +15,4 @@ class User(TimestampIdMixin, Base):
 
     analyses: Mapped[list["Analysis"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     actas: Mapped[list["Acta"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="user", cascade="all, delete-orphan")

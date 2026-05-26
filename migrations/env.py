@@ -5,7 +5,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.db.base import Base
-from app.models import Acta, Analysis, User
+from app.models import Acta, Analysis, AuditLog, User
 
 config = context.config
 if config.config_file_name is not None:
@@ -14,7 +14,7 @@ if config.config_file_name is not None:
 settings = get_settings()
 config.set_main_option("sqlalchemy.url", settings.database_url)
 target_metadata = Base.metadata
-_ = (Acta, Analysis, User)
+_ = (Acta, Analysis, AuditLog, User)
 
 
 def run_migrations_offline() -> None:

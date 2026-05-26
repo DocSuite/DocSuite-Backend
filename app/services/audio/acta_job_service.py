@@ -11,6 +11,7 @@ from app.services.ai.acta_service import generate_acta_sync
 from app.services.audio.diarizer import diarize_audio_sync
 from app.services.audio.preprocessor import preprocess_audio
 from app.services.audio.transcriber import transcribe_audio_sync
+from app.services.db.audit_service import create_audit_event
 from app.services.db.acta_service import create_acta
 
 _progress: dict[str, tuple[int, str]] = {}
@@ -55,6 +56,14 @@ def create_acta_job(user_id: str, filename: str, file_path: Path) -> ActaJobRead
         db.commit()
         db.refresh(record)
         job_id = record.id
+        create_audit_event(
+            db,
+            user_id,
+            "Procesamiento iniciado",
+            "DocActa",
+            detail=filename,
+            resource_id=job_id,
+        )
     except Exception:
         _release_slot(user_id)
         raise
@@ -176,6 +185,14 @@ def _run_acta_job(job_id: str, user_id: str) -> None:
         try:
             acta = create_acta(db, user_id, acta_payload)
             acta_id = acta.id
+            create_audit_event(
+                db,
+                user_id,
+                "Acta generada",
+                "DocActa",
+                detail=acta.filename,
+                resource_id=acta.id,
+            )
         finally:
             db.close()
 
@@ -183,6 +200,19 @@ def _run_acta_job(job_id: str, user_id: str) -> None:
 
     except Exception as exc:
         _persist_failed(job_id, str(exc))
+        db = get_session_local()()
+        try:
+            create_audit_event(
+                db,
+                user_id,
+                "Procesamiento fallido",
+                "DocActa",
+                detail=str(exc)[:1000],
+                resource_id=job_id,
+                status="error",
+            )
+        finally:
+            db.close()
 
     finally:
         if preprocessed is not None:
