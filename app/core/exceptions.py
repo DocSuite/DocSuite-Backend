@@ -9,3 +9,8 @@ class DocSuiteException(HTTPException):
 class UnauthorizedException(DocSuiteException):
     def __init__(self, detail: str = "Credenciales invalidas") -> None:
         super().__init__(detail=detail, status_code=status.HTTP_401_UNAUTHORIZED)
+
+
+class ForbiddenException(DocSuiteException):
+    def __init__(self, detail: str = "No tienes permisos para esta accion") -> None:
+        super().__init__(detail=detail, status_code=status.HTTP_403_FORBIDDEN)

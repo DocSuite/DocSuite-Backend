@@ -27,12 +27,13 @@ def create_audit_event(
     return audit
 
 
-def list_audit_events(db: Session, user_id: str, limit: int = 100) -> list[AuditLog]:
+def list_audit_events(db: Session, user_id: str | None = None, limit: int = 100) -> list[AuditLog]:
     statement = (
         select(AuditLog)
         .options(joinedload(AuditLog.user))
-        .where(AuditLog.user_id == user_id)
         .order_by(AuditLog.created_at.desc())
         .limit(limit)
     )
+    if user_id is not None:
+        statement = statement.where(AuditLog.user_id == user_id)
     return list(db.scalars(statement).all())
