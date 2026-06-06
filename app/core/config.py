@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default="change-me", validation_alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=60, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    admin_email: str = Field(default="admin@docsuite.edu.pe", validation_alias="ADMIN_EMAIL")
+    admin_full_name: str = Field(default="Administrador DocSuite", validation_alias="ADMIN_FULL_NAME")
+    admin_password: str = Field(default="DocSuite123", validation_alias="ADMIN_PASSWORD")
 
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     openai_model: str = "gpt-4o"
@@ -39,6 +42,12 @@ class Settings(BaseSettings):
     pyannote_model: str = "pyannote/speaker-diarization-community-1"
     pyannote_device: str = Field(default="auto", validation_alias="PYANNOTE_DEVICE")
     hf_token: str | None = Field(default=None, validation_alias="HF_TOKEN")
+    transcription_provider: str = Field(default="local", validation_alias="TRANSCRIPTION_PROVIDER")
+    deepgram_api_key: str | None = Field(default=None, validation_alias="DEEPGRAM_API_KEY")
+    deepgram_model: str = Field(default="nova-3", validation_alias="DEEPGRAM_MODEL")
+    deepgram_language: str = Field(default="es", validation_alias="DEEPGRAM_LANGUAGE")
+    deepgram_diarize_model: str = Field(default="latest", validation_alias="DEEPGRAM_DIARIZE_MODEL")
+    deepgram_timeout_seconds: int = Field(default=1800, validation_alias="DEEPGRAM_TIMEOUT_SECONDS")
 
 
 @lru_cache
