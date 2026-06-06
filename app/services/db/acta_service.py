@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models.acta import Acta
 from app.schemas.acta import ActaCreate, ActaUpdate
+from app.utils.acta_tasks import extract_tasks_from_markdown
 
 
 def create_acta(db: Session, user_id: str, payload: ActaCreate) -> Acta:
@@ -45,6 +46,8 @@ def update_acta_content(db: Session, acta: Acta, payload: ActaUpdate) -> Acta:
         acta.transcription = payload.transcription
     if payload.result is not None:
         acta.result = payload.result
+        if payload.tasks is None:
+            acta.tasks = [task.model_dump() for task in extract_tasks_from_markdown(payload.result)]
     if payload.tasks is not None:
         acta.tasks = [t.model_dump() for t in payload.tasks]
     db.commit()

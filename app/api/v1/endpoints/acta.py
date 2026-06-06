@@ -2,29 +2,41 @@ import asyncio
 import json
 import urllib.parse
 from collections.abc import AsyncGenerator
+from typing import Annotated
 
-from fastapi import APIRouter, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import DbSession, require_permission
 from app.core.exceptions import DocSuiteException
+from app.models.user import User
 from app.schemas.acta import ActaJobRead, ActaRead, ActaUpdate, SpeakerNameMap
 from app.services.ai.acta_service import generate_acta
 from app.services.audio.acta_job_service import create_acta_job, get_acta_job
 from app.services.audio.audio_utils import AUDIO_EXTENSIONS
 from app.services.audio.speech_service import transcribe_and_diarize_audio
+from app.services.db.acta_service import (
+    create_acta,
+    get_acta_by_id,
+    update_acta_content,
+    update_speaker_names,
+)
 from app.services.db.audit_service import create_audit_event
-from app.services.db.acta_service import create_acta, get_acta_by_id, update_acta_content, update_speaker_names
 from app.services.export.docx_service import markdown_to_docx
 from app.services.storage.file_service import save_upload_file
 
 router = APIRouter()
 
+DocActaReader = Annotated[User, Depends(require_permission("/doc-acta"))]
+DocActaCreator = Annotated[User, Depends(require_permission("/doc-acta", "create"))]
+DocActaEditor = Annotated[User, Depends(require_permission("/doc-acta", "update"))]
+AudioFile = Annotated[UploadFile, File()]
+
 
 @router.post("/jobs", response_model=ActaJobRead, status_code=status.HTTP_202_ACCEPTED)
 async def create_meeting_acta_job(
-    current_user: CurrentUser,
-    file: UploadFile = File(...),
+    current_user: DocActaCreator,
+    file: AudioFile,
 ) -> ActaJobRead:
     saved_file = await save_upload_file(file, allowed_extensions=AUDIO_EXTENSIONS)
     try:
@@ -34,7 +46,10 @@ async def create_meeting_acta_job(
 
 
 @router.get("/jobs/{job_id}", response_model=ActaJobRead)
-def read_meeting_acta_job(job_id: str, current_user: CurrentUser) -> ActaJobRead:
+def read_meeting_acta_job(
+    job_id: str,
+    current_user: DocActaReader,
+) -> ActaJobRead:
     job = get_acta_job(job_id, current_user.id)
     if job is None:
         raise DocSuiteException("Job no encontrado", status_code=status.HTTP_404_NOT_FOUND)
@@ -42,7 +57,10 @@ def read_meeting_acta_job(job_id: str, current_user: CurrentUser) -> ActaJobRead
 
 
 @router.get("/jobs/{job_id}/stream")
-async def stream_job_progress(job_id: str, current_user: CurrentUser) -> StreamingResponse:
+async def stream_job_progress(
+    job_id: str,
+    current_user: DocActaReader,
+) -> StreamingResponse:
     user_id = current_user.id
 
     async def _generator() -> AsyncGenerator[str, None]:
@@ -76,8 +94,8 @@ async def stream_job_progress(job_id: str, current_user: CurrentUser) -> Streami
 @router.post("/", response_model=ActaRead, status_code=status.HTTP_201_CREATED)
 async def create_meeting_acta(
     db: DbSession,
-    current_user: CurrentUser,
-    file: UploadFile = File(...),
+    current_user: DocActaCreator,
+    file: AudioFile,
 ) -> ActaRead:
     saved_file = await save_upload_file(file, allowed_extensions=AUDIO_EXTENSIONS)
     transcription, diarization = transcribe_and_diarize_audio(saved_file)
@@ -95,7 +113,11 @@ async def create_meeting_acta(
 
 
 @router.get("/{acta_id}", response_model=ActaRead)
-def read_acta(acta_id: str, db: DbSession, current_user: CurrentUser) -> ActaRead:
+def read_acta(
+    acta_id: str,
+    db: DbSession,
+    current_user: DocActaReader,
+) -> ActaRead:
     acta = get_acta_by_id(db, acta_id, current_user.id)
     if acta is None:
         raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
@@ -107,7 +129,7 @@ def edit_acta(
     acta_id: str,
     body: ActaUpdate,
     db: DbSession,
-    current_user: CurrentUser,
+    current_user: DocActaEditor,
 ) -> ActaRead:
     acta = get_acta_by_id(db, acta_id, current_user.id)
     if acta is None:
@@ -125,7 +147,11 @@ def edit_acta(
 
 
 @router.get("/{acta_id}/export/docx")
-def export_acta_docx(acta_id: str, db: DbSession, current_user: CurrentUser) -> StreamingResponse:
+def export_acta_docx(
+    acta_id: str,
+    db: DbSession,
+    current_user: DocActaReader,
+) -> StreamingResponse:
     acta = get_acta_by_id(db, acta_id, current_user.id)
     if acta is None:
         raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
@@ -148,7 +174,11 @@ def export_acta_docx(acta_id: str, db: DbSession, current_user: CurrentUser) -> 
 
 
 @router.post("/{acta_id}/regenerate", response_model=ActaRead)
-async def regenerate_acta(acta_id: str, db: DbSession, current_user: CurrentUser) -> ActaRead:
+async def regenerate_acta(
+    acta_id: str,
+    db: DbSession,
+    current_user: DocActaEditor,
+) -> ActaRead:
     acta = get_acta_by_id(db, acta_id, current_user.id)
     if acta is None:
         raise DocSuiteException("Acta no encontrada", status_code=status.HTTP_404_NOT_FOUND)
@@ -170,7 +200,7 @@ def assign_speaker_names(
     acta_id: str,
     body: SpeakerNameMap,
     db: DbSession,
-    current_user: CurrentUser,
+    current_user: DocActaEditor,
 ) -> ActaRead:
     acta = get_acta_by_id(db, acta_id, current_user.id)
     if acta is None:

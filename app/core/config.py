@@ -20,9 +20,16 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default="change-me", validation_alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=60, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    password_reset_token_expire_minutes: int = Field(default=30, validation_alias="PASSWORD_RESET_TOKEN_EXPIRE_MINUTES")
     admin_email: str = Field(default="admin@docsuite.edu.pe", validation_alias="ADMIN_EMAIL")
     admin_full_name: str = Field(default="Administrador DocSuite", validation_alias="ADMIN_FULL_NAME")
     admin_password: str = Field(default="DocSuite123", validation_alias="ADMIN_PASSWORD")
+    mail_host: str = Field(default="smtp.gmail.com", validation_alias="MAIL_HOST")
+    mail_port: int = Field(default=587, validation_alias="MAIL_PORT")
+    mail_username: str | None = Field(default=None, validation_alias="MAIL_USERNAME")
+    mail_password: str | None = Field(default=None, validation_alias="MAIL_PASSWORD")
+    mail_from: str | None = Field(default=None, validation_alias="MAIL_FROM")
+    frontend_url: str = Field(default="http://localhost:4200", validation_alias="FRONTEND_URL")
 
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     openai_model: str = "gpt-4o"

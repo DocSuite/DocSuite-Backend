@@ -2,6 +2,7 @@ from pathlib import Path
 
 from app.schemas.acta import ActaCreate
 from app.services.ai.openai_client import OpenAIClient
+from app.utils.acta_tasks import extract_tasks_from_markdown
 
 
 def _load_prompt() -> str:
@@ -28,5 +29,5 @@ async def _generate_acta_payload(filename: str, transcription: str, diarization:
         transcription=transcription,
         diarization=diarization,
         result=result,
-        tasks=[],
+        tasks=extract_tasks_from_markdown(result),
     )
