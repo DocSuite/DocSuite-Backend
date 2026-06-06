@@ -12,8 +12,7 @@ from app.schemas.acta import ActaJobRead, ActaRead, ActaUpdate, SpeakerNameMap
 from app.services.ai.acta_service import generate_acta
 from app.services.audio.acta_job_service import create_acta_job, get_acta_job
 from app.services.audio.audio_utils import AUDIO_EXTENSIONS
-from app.services.audio.diarizer import diarize_audio
-from app.services.audio.transcriber import transcribe_audio
+from app.services.audio.speech_service import transcribe_and_diarize_audio
 from app.services.db.audit_service import create_audit_event
 from app.services.db.acta_service import create_acta, get_acta_by_id, update_acta_content, update_speaker_names
 from app.services.export.docx_service import markdown_to_docx
@@ -81,8 +80,7 @@ async def create_meeting_acta(
     file: UploadFile = File(...),
 ) -> ActaRead:
     saved_file = await save_upload_file(file, allowed_extensions=AUDIO_EXTENSIONS)
-    transcription = await transcribe_audio(saved_file)
-    diarization = await diarize_audio(saved_file)
+    transcription, diarization = transcribe_and_diarize_audio(saved_file)
     acta_payload = await generate_acta(file.filename or saved_file.name, transcription, diarization)
     acta = create_acta(db, current_user.id, acta_payload)
     create_audit_event(

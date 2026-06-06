@@ -8,9 +8,8 @@ from app.db.session import get_session_local
 from app.models.job import ActaJobRecord
 from app.schemas.acta import ActaJobRead
 from app.services.ai.acta_service import generate_acta_sync
-from app.services.audio.diarizer import diarize_audio_sync
 from app.services.audio.preprocessor import preprocess_audio
-from app.services.audio.transcriber import transcribe_audio_sync
+from app.services.audio.speech_service import transcribe_and_diarize_audio, use_deepgram
 from app.services.db.audit_service import create_audit_event
 from app.services.db.acta_service import create_acta
 
@@ -171,11 +170,11 @@ def _run_acta_job(job_id: str, user_id: str) -> None:
         _set_progress(job_id, 10, "Preprocesando audio")
         preprocessed, duration = preprocess_audio(file_path)
 
-        _set_progress(job_id, 22, "Transcribiendo audio")
-        transcription = transcribe_audio_sync(preprocessed)
-
-        _set_progress(job_id, 55, "Identificando participantes")
-        diarization = diarize_audio_sync(preprocessed)
+        if use_deepgram():
+            _set_progress(job_id, 22, "Transcribiendo con Deepgram")
+        else:
+            _set_progress(job_id, 22, "Transcribiendo audio")
+        transcription, diarization = transcribe_and_diarize_audio(preprocessed)
 
         _set_progress(job_id, 80, "Generando acta")
         acta_payload = generate_acta_sync(filename, transcription, diarization)
