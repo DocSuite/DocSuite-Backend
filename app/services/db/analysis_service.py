@@ -13,6 +13,11 @@ def create_analysis(db: Session, user_id: str, payload: AnalysisCreate) -> Analy
     return analysis
 
 
+def get_analysis_by_id(db: Session, analysis_id: str, user_id: str) -> Analysis | None:
+    statement = select(Analysis).where(Analysis.id == analysis_id, Analysis.user_id == user_id)
+    return db.scalars(statement).first()
+
+
 def list_analyses_by_user(db: Session, user_id: str) -> list[Analysis]:
     statement = select(Analysis).where(Analysis.user_id == user_id).order_by(Analysis.created_at.desc())
     return list(db.scalars(statement).all())
