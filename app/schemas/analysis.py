@@ -24,3 +24,12 @@ class AnalysisRead(TimestampIdSchema):
     mode: str
     extracted_text: str
     result: str
+
+
+class AnalysisJobRead(BaseModel):
+    job_id: str
+    status: str
+    progress: int = Field(ge=0, le=100)
+    message: str
+    analysis_id: str | None = None
+    error: str | None = None
