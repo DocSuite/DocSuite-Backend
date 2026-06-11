@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.base_schema import ORMBase
 
@@ -11,11 +11,15 @@ class RoleRead(ORMBase):
 
 
 class RoleCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     name: str = Field(min_length=2, max_length=80)
     description: str | None = Field(default=None, max_length=250)
 
 
 class RoleUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     name: str | None = Field(default=None, min_length=2, max_length=80)
     description: str | None = Field(default=None, max_length=250)
 
@@ -33,7 +37,7 @@ class RolePermissionRead(BaseModel):
 
 
 class RolePermissionUpdate(BaseModel):
-    view_id: int
+    view_id: int = Field(ge=1)
     can_read: bool = False
     can_create: bool = False
     can_update: bool = False

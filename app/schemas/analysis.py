@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.base_schema import TimestampIdSchema
 
@@ -11,10 +11,12 @@ class AnalysisMode(StrEnum):
 
 
 class AnalysisCreate(BaseModel):
-    filename: str
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    filename: str = Field(min_length=1, max_length=255)
     mode: AnalysisMode
-    extracted_text: str
-    result: str
+    extracted_text: str = Field(min_length=1)
+    result: str = Field(min_length=1)
 
 
 class AnalysisRead(TimestampIdSchema):
